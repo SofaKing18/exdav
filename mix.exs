@@ -14,7 +14,10 @@ defmodule Exdav.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger, :cowboy, :plug, :tzdata]]
+    [
+      applications: [:logger, :cowboy, :plug, :tzdata],
+      mod: {Exdav, []}
+    ]
   end
 
   # Dependencies can be Hex packages:
@@ -30,7 +33,7 @@ defmodule Exdav.Mixfile do
     [{:cowboy, "~> 1.0.0"},
      {:plug, "~> 1.0"},
      {:xml_builder, "~> 0.0.6"},
-     {:timex, "~> 0.19"},
+     {:timex, "~> 3.0"},
      {:sweet_xml, "~> 0.6"}]
   end
 end

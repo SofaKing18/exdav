@@ -3,8 +3,15 @@ defmodule Exdav do
   @methods ~w(LOCK UNLOCK OPTIONS PROPFIND PROPPATCH MKCOL DELETE PUT COPY MOVE)
 
   def init(options) do
-  # initialize options
-    put_in options[:base_file_path], "/Users/stueccles/Development/elixir"
+    options
+  end
+
+  def start(_type, _args) do
+    children = [
+      Plug.Adapters.Cowboy.child_spec(:http, Exdav, [base_file_path: "storage"], port: 1337)
+    ]
+
+    Supervisor.start_link(children, strategy: :one_for_one)
   end
 
   def call(conn, opts) do
@@ -20,8 +27,10 @@ defmodule Exdav do
 
   def webdav(conn = %{method: "GET"}, opts) do
     resource = WebdavResource.from_path_info(conn.request_path, opts)
-    conn
-    |> send_file(HttpStatus.code(:ok), resource.file_path)
+    case resource.status do
+      :ok -> send_file(conn, HttpStatus.code(:ok), resource.file_path)
+      _ -> send_webdav_response(conn, resource.status)
+    end
   end
 
   def webdav(conn = %{method: "MKCOL"}, opts) do
@@ -88,7 +97,7 @@ defmodule Exdav do
     {:ok, body, conn} = Plug.Conn.read_body(conn, length: 1_000_000)
 
     try do
-      SweetXml.parse(body)
+      xml = SweetXml.parse(body)
 
       case WebdavResource.from_path_info(conn.request_path, opts) do
         %{status: :notfound} -> send_webdav_response(conn, :notfound)
