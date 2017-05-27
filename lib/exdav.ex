@@ -3,12 +3,18 @@ defmodule Exdav do
   @methods ~w(LOCK UNLOCK OPTIONS PROPFIND PROPPATCH MKCOL DELETE PUT COPY MOVE)
 
   def init(options) do
-    options
+    user = options[:user]
+    password = options[:password]
+    if user && password do
+      put_in options[:digest], Base.encode64 "#{user}:#{password}"
+    else
+      options
+    end
   end
 
   def start(_type, _args) do
     children = [
-      Plug.Adapters.Cowboy.child_spec(:http, Exdav, [base_file_path: "storage"], port: 1337)
+      Plug.Adapters.Cowboy.child_spec(:http, Exdav, [base_file_path: "storage", user: "abc", password: "pepe"], port: 1337)
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one)
@@ -16,7 +22,30 @@ defmodule Exdav do
 
   def call(conn, opts) do
     opts = put_in(opts[:base_href], href(conn))
-    webdav(conn, opts)
+    if opts[:digest] do
+      authenticate conn, opts
+      webdav(conn, opts)
+    else
+      webdav(conn, opts)
+    end
+  end
+
+  def authenticate(conn, opts) do
+    try do
+      case Enum.find(conn.req_headers, fn({key, _}) -> key == "authorization" end) do
+        {"authorization", string} ->
+          [req_digest] = Regex.run(~r/Basic\s+([^\s]+)$/, string, capture: :all_but_first)
+          if req_digest == opts[:digest] do
+            :ok
+          else
+            raise "unauthorized"
+          end
+        _ ->
+          raise "unauthorized"
+      end
+    rescue
+      _ -> send_webdav_response(conn, :unauthorized)
+    end
   end
 
   def webdav(conn = %{method: "PUT"}, opts) do
