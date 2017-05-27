@@ -57,7 +57,11 @@ defmodule Exdav do
   def webdav(conn = %{method: "GET"}, opts) do
     resource = WebdavResource.from_path_info(conn.request_path, opts)
     case resource.status do
-      :ok -> send_file(conn, HttpStatus.code(:ok), resource.file_path)
+      :ok ->
+        case resource.resourcetype do
+          :file -> send_file(conn, HttpStatus.code(:ok), resource.file_path)
+          :collection -> send_webdav_response(conn, resource.status, [])
+        end
       _ -> send_webdav_response(conn, resource.status)
     end
   end
@@ -214,7 +218,7 @@ defmodule Exdav do
 
   defp delete_resource(resource) do
     case File.rm_rf(resource.file_path) do
-      {:ok, _files} -> :created
+      {:ok, _files} -> :ok
       {:error, _file, _reason} -> :error
     end
   end
