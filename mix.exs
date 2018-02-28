@@ -30,7 +30,7 @@ defmodule Exdav.Mixfile do
     [{:cowboy, "~> 1.0.0"},
      {:plug, "~> 1.0"},
      {:xml_builder, "~> 0.0.6"},
-     {:timex, "~> 0.19"},
+     {:timex, "~> 3.1.15"},
      {:sweet_xml, "~> 0.6"}]
   end
 end

@@ -88,7 +88,7 @@ defmodule Exdav do
     {:ok, body, conn} = Plug.Conn.read_body(conn, length: 1_000_000)
 
     try do
-      SweetXml.parse(body)
+      xml = SweetXml.parse(body)
 
       case WebdavResource.from_path_info(conn.request_path, opts) do
         %{status: :notfound} -> send_webdav_response(conn, :notfound)
